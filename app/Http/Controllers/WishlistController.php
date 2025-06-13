@@ -10,11 +10,27 @@ class WishlistController extends Controller
 {
     public function index(Request $request)
     {
-        $data = Wishlist::all();
+        $userId = $request->header('Authorization');
+
+        if ($userId) {
+            $data = Wishlist::where('email', $userId)
+                ->orWhereNull('email')
+                ->get()
+                ->map(function ($item) use ($userId) {
+                    $item->mine = $item->email === $userId ? 1 : 0;
+                    return $item;
+                });
+        } else {
+            $data = Wishlist::whereNull('email')
+                ->get()
+                ->map(function ($item) {
+                    $item->mine = 0;
+                    return $item;
+                });
+        }
 
         return response()->json($data);
     }
-
 
     public function create()
     {
@@ -24,7 +40,7 @@ class WishlistController extends Controller
     public function store(Request $request)
     {
         $email = $request->header('Authorization'); // <- ambil dari header
-        // if($email){
+        if($email){
             $request->validate([
                 'judul' => 'required|string|max:255',
                 'deskripsi' => 'required|string|max:255',
@@ -43,10 +59,8 @@ class WishlistController extends Controller
                 'status' => 'success',
                 'message' => 'Data berhasil ditambahkan.'
             ]);
-        // }
-        // return response()->json([
-        //     'message' => 'Anda Belum Login.'
-        // ], 401);
+        
+        }
     }
 
     public function update(Request $request, $id)
